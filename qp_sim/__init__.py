@@ -4,4 +4,3 @@ from .qiskit_backend import QPagingSimulator
 
 __all__ = ["SimulatorController", "QPagingSimulator"]
 __version__ = "0.1.0"
-

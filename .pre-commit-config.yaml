@@ -1,0 +1,51 @@
+# Pre-commit hooks for QP-Sim
+# See https://pre-commit.com for more information
+
+repos:
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(ALL_CODE.txt|README.md)
+      - id: end-of-file-fixer
+        exclude: ^(ALL_CODE.txt)
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # Rust formatting
+  - repo: https://github.com/doublify/pre-commit-rust
+    rev: v1.0
+    hooks:
+      - id: fmt
+        name: rustfmt
+        entry: bash -c 'cargo fmt -- --check || cargo fmt'
+        language: system
+        types: [file]
+        files: \.rs$
+        pass_filenames: false
+        always_run: true
+      - id: clippy
+        name: clippy
+        entry: bash -c 'cargo clippy -- -D warnings || true'
+        language: system
+        types: [file]
+        files: \.rs$
+        pass_filenames: false
+        always_run: true
+        args: ['--', '-W', 'clippy::all', '-W', 'clippy::pedantic']
+
+  # Python formatting (optional, can be enabled if needed)
+  # - repo: https://github.com/psf/black
+  #   rev: 24.1.1
+  #   hooks:
+  #     - id: black
+  #       language_version: python3
+  #       exclude: ^(ALL_CODE.txt)

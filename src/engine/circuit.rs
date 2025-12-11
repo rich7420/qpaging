@@ -1,6 +1,6 @@
 // Circuit Analyzer
-use std::collections::HashMap;
 use bitvec::prelude::*;
+use std::collections::HashMap;
 
 /// Represents a simple Quantum Gate for analysis
 #[derive(Debug, Clone)]
@@ -35,13 +35,16 @@ impl CircuitAnalyzer {
     /// The "Lookahead" logic
     pub fn analyze(&self, gates: &[GateOp]) -> AccessSchedule {
         let mut timeline = HashMap::new();
-        println!("[Analyzer] Analyzing {} gates for Access Patterns...", gates.len());
-        
+        println!(
+            "[Analyzer] Analyzing {} gates for Access Patterns...",
+            gates.len()
+        );
+
         for (idx, gate) in gates.iter().enumerate() {
             let required_pages = self.get_pages_for_gate(gate);
             timeline.insert(idx, required_pages);
         }
-        
+
         AccessSchedule { timeline }
     }
 
@@ -49,17 +52,17 @@ impl CircuitAnalyzer {
     fn get_pages_for_gate(&self, gate: &GateOp) -> BitVec {
         let total_pages = self.total_bytes / self.page_size;
         let mut pages = bitvec![usize, Lsb0; 0; total_pages];
-        
+
         // For MVP, handling single qubit gates
         if gate.targets.is_empty() {
             return pages;
         }
-        
+
         let target_qubit = gate.targets[0];
-        
+
         let stride_elements = 1 << target_qubit;
         let stride_bytes = stride_elements * self.element_size;
-        
+
         // --- SCENARIO A: Low Qubits (Dense / Sequential Access) ---
         // If the stride is smaller than a page (e.g., qubits 0-7),
         // the gate operations happen entirely within local memory blocks.
@@ -68,17 +71,17 @@ impl CircuitAnalyzer {
             pages.fill(true); // Mark all pages as needed
             return pages;
         }
-        
+
         // --- SCENARIO B: High Qubits (Strided Access) ---
         // If stride is larger than a page (e.g., qubit 20),
         // we touch a block of pages, skip a block, touch a block...
         // This is where Q-Paging beats the OS.
-        
+
         // Block size in bytes = 2 * stride_bytes
         // Structure: [ Active Region (stride_bytes) | Inactive Region (stride_bytes) ]
         let pages_per_stride = stride_bytes / self.page_size;
         let pages_per_block = pages_per_stride * 2;
-        
+
         // Iterate through blocks and mark the first half of each block
         // Optimized: We iterate by page indices
         for block_start in (0..total_pages).step_by(pages_per_block) {
@@ -89,8 +92,7 @@ impl CircuitAnalyzer {
                 }
             }
         }
-        
+
         pages
     }
 }
-

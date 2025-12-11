@@ -1,8 +1,8 @@
 // Virtual Memory Manager
+use bitvec::prelude::*;
 use memmap2::{MmapMut, MmapOptions};
 use std::fs::File;
 use std::path::Path;
-use bitvec::prelude::*;
 
 /// page size typically 4KB, usually defined by system but hardcoded for MVP
 const PAGE_SIZE: usize = 4096;
@@ -21,7 +21,7 @@ impl QuantumMemoryManager {
     /// Create a new memory manager backed by a file on NVMe SSD
     pub fn new(num_qubits: usize, filepath: &str) -> std::io::Result<Self> {
         let total_bytes = (1 << num_qubits) * 16; // Complex128 (16 bytes)
-        
+
         let path = Path::new(filepath);
         let file = File::options()
             .read(true)
@@ -83,4 +83,3 @@ impl Drop for QuantumMemoryManager {
         let _ = self.mapping.flush();
     }
 }
-

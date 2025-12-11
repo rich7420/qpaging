@@ -21,4 +21,3 @@ dependencies = [
 [tool.maturin]
 features = ["pyo3/extension-module"]
 module-name = "qp_sim.qp_sim_core" # Map Rust lib to inside the python package
-

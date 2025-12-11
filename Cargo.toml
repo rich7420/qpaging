@@ -32,4 +32,3 @@ ndarray = "0.16"
 lto = true
 codegen-units = 1
 panic = "abort"
-

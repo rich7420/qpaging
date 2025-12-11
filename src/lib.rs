@@ -11,4 +11,3 @@ fn qp_sim_core(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<SimulatorController>()?;
     Ok(())
 }
-
