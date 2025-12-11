@@ -11,6 +11,7 @@ pub struct GateOp {
 }
 
 /// The "Global Access Schedule"
+#[derive(Clone)]
 pub struct AccessSchedule {
     /// Maps Gate Index -> BitMap of Required Pages
     /// Using BitVec is much more memory efficient than Vec<usize>

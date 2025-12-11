@@ -1,7 +1,11 @@
-// Controller Integration with Phase 2 Prefetching
+// Controller Integration with Phase 2 Prefetching and Phase 3 Features
 use pyo3::prelude::*;
 
-use crate::engine::circuit::{CircuitAnalyzer, GateOp};
+use std::collections::hash_map::DefaultHasher;
+use std::fs;
+use std::hash::{Hash, Hasher};
+
+use crate::engine::circuit::{AccessSchedule, CircuitAnalyzer, GateOp};
 use crate::engine::io::AsyncIoEngine;
 use crate::engine::kernels;
 use crate::engine::memory::QuantumMemoryManager;
@@ -14,6 +18,9 @@ pub struct SimulatorController {
     // Tuning parameter: How many gates to look ahead?
     // For MVP, lookahead = 1 is sufficient to demonstrate mechanism
     lookahead_depth: usize,
+    // [Phase 3] Caching Mechanism for VQA scenarios
+    cached_schedule: Option<AccessSchedule>,
+    last_circuit_hash: u64,
 }
 
 #[pymethods]
@@ -25,6 +32,8 @@ impl SimulatorController {
             num_qubits,
             backing_store,
             lookahead_depth: 1,
+            cached_schedule: None,
+            last_circuit_hash: 0,
         }
     }
 
@@ -41,6 +50,27 @@ impl SimulatorController {
         Ok(())
     }
 
+    /// Create a checkpoint snapshot of the current state
+    pub fn create_checkpoint(&self, checkpoint_path: String) -> PyResult<()> {
+        if let Some(mem) = &self.memory {
+            // Flush memory to disk
+            mem.snapshot()
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?;
+
+            // Copy backing file to checkpoint location
+            // Note: Copies entire file. Use COW (reflink) in production for efficiency.
+            fs::copy(&self.backing_store, &checkpoint_path)
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?;
+
+            println!("[Rust Core] Checkpoint created at {}", checkpoint_path);
+            Ok(())
+        } else {
+            Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
+                "Memory not initialized",
+            ))
+        }
+    }
+
     /// Phase 2: Execute Circuit (The Main Loop)
     /// Receives a list of gates from Python
     pub fn run_circuit(
@@ -53,21 +83,38 @@ impl SimulatorController {
             PyErr::new::<pyo3::exceptions::PyRuntimeError, _>("Memory not initialized")
         })?;
 
-        // 1. Convert inputs
+        // Convert inputs and compute hash for cache lookup
         let mut ops = Vec::new();
+        let mut hasher = DefaultHasher::new();
+
         for i in 0..gate_names.len() {
+            // Hash structure (name + targets), ignore parameters
+            gate_names[i].hash(&mut hasher);
+            targets[i].hash(&mut hasher);
+
             ops.push(GateOp {
                 name: gate_names[i].clone(),
                 targets: targets[i].clone(),
                 params: params[i].clone(),
             });
         }
+        let current_hash = hasher.finish();
 
-        // 2. Analyze (Lookahead)
-        let analyzer = CircuitAnalyzer::new(self.num_qubits);
-        let schedule = analyzer.analyze(&ops);
+        // Analyze circuit or reuse cached schedule (VQA optimization)
+        let schedule = if self.last_circuit_hash == current_hash && self.cached_schedule.is_some() {
+            println!("[Rust Core] Cache HIT. Reusing Analysis Schedule.");
+            self.cached_schedule.as_ref().unwrap().clone()
+        } else {
+            println!("[Rust Core] Cache MISS. Running Circuit Analysis...");
+            let analyzer = CircuitAnalyzer::new(self.num_qubits);
+            let schedule = analyzer.analyze(&ops);
 
-        // 3. Initialize IO Engine (Queue Depth 256 for high concurrency)
+            self.cached_schedule = Some(schedule.clone());
+            self.last_circuit_hash = current_hash;
+            schedule
+        };
+
+        // Initialize IO engine with high concurrency queue
         let mut io_engine = AsyncIoEngine::new(256).map_err(|e| {
             PyErr::new::<pyo3::exceptions::PyIOError, _>(format!("Failed to init io_uring: {}", e))
         })?;
@@ -101,10 +148,11 @@ impl SimulatorController {
             // Cleanup completed IO tasks (don't let CQ overflow)
             io_engine.reap_completions();
 
-            // --- B. COMPUTATION STEP (Phase 1) ---
-            // At this point, pages for Gate 'i' should have been requested
-            // during loop iteration 'i - lookahead_depth'.
-            // OS handles the actual mapping.
+            // Safety check: OS handles page faults automatically via mmap
+            // If prefetch is slow, mmap will block on access until pages are loaded
+
+            // Apply gate operation
+            // Pages should be prefetched from iteration (i - lookahead_depth)
             let matrix = kernels::get_matrix(&op.name, &op.params);
 
             kernels::apply_single_qubit_gate(

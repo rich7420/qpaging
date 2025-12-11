@@ -10,8 +10,8 @@ const PAGE_SIZE: usize = 4096;
 /// Manages the huge state vector file and its memory mapping.
 /// Implements "Scope Memory" - resources are tied to this struct's lifetime.
 pub struct QuantumMemoryManager {
-    mapping: MmapMut,
-    _file: File, // Keep file handle open
+    pub mapping: MmapMut, // Public for Phase 3 checkpoint access
+    _file: File,          // Keep file handle open
     pub num_qubits: usize,
     pub total_bytes: usize,
     pub resident_bitmap: BitVec, // Tracks which pages are currently in DRAM
@@ -58,7 +58,7 @@ impl QuantumMemoryManager {
         &mut self.mapping[..]
     }
 
-    /// [New] Expose raw pointer for io_uring operations
+    /// Expose raw pointer for io_uring operations
     pub fn as_ptr(&self) -> *const u8 {
         self.mapping.as_ptr()
     }
@@ -74,6 +74,12 @@ impl QuantumMemoryManager {
             );
         }
         self.resident_bitmap.set(page_idx, false);
+    }
+
+    /// [Phase 3] Force sync memory to disk
+    /// Returns the flush result for checkpointing
+    pub fn snapshot(&self) -> std::io::Result<()> {
+        self.mapping.flush()
     }
 }
 

@@ -100,11 +100,9 @@ impl AsyncIoEngine {
         let mut completed = 0;
         let mut cq = self.ring.completion();
 
-        // Sync: check what's done without blocking
-        // In a real optimized loop, we might want to `cq.wait_for_cqe()` if we are strictly bound by IO
-        // But for prefetching, we just want to clean up.
+        // Poll completion queue without blocking
+        // For prefetch, we only need to drain completed entries
         while let Some(_cqe) = cq.next() {
-            // In a robust system, we check cqe.result() for errors
             completed += 1;
         }
 

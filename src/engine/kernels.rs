@@ -12,26 +12,21 @@ pub fn apply_single_qubit_gate(
     target_qubit: usize,
     matrix: [Complex64; 4],
 ) {
-    // 1. Safety Cast: Treat raw bytes as Complex64 (16 bytes)
-    // We assume the mmap is aligned to page boundaries, which satisfies f64 alignment.
+    // Cast raw bytes to Complex64 (16 bytes per element)
+    // mmap alignment satisfies f64 requirements
     let total_elements = mmap_slice.len() / 16;
     let state_vector = unsafe {
         std::slice::from_raw_parts_mut(mmap_slice.as_mut_ptr() as *mut Complex64, total_elements)
     };
 
-    // 2. Determine Stride
-    // Stride is the distance between pair elements (i, i + 2^k)
+    // Calculate stride: distance between paired elements (i, i + 2^k)
     let stride = 1 << target_qubit;
     let block_size = stride * 2;
 
-    // 3. Parallel Execution Logic
-    //
-    // The state vector structure repeats every 2^(k+1) elements (block_size).
-    // Inside each block:
-    // - The first 'stride' elements correspond to qubit_k = |0>
-    // - The next 'stride' elements correspond to qubit_k = |1>
-    //
-    // We use Rayon to process these blocks in parallel.
+    // Process blocks in parallel
+    // Each block of size 2^(k+1) contains:
+    // - First 'stride' elements: qubit_k = |0>
+    // - Next 'stride' elements: qubit_k = |1>
     state_vector.par_chunks_mut(block_size).for_each(|chunk| {
         // Split the chunk into the |0> part and |1> part
         let (lower, upper) = chunk.split_at_mut(stride);
