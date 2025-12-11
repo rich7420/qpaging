@@ -28,6 +28,7 @@ qp_data/
 scratch_space/
 *.bin
 state_*.bin
+ALL_CODE.txt
 
 # OS
 .DS_Store
