@@ -25,8 +25,16 @@ class QPagingSimulator(BackendV2):
             os.makedirs(backing_store)
 
         # Define target (gates supported)
-        self._target = Target()
-        # In a real app, we would add_instruction for X, H, CX, etc.
+        # For MVP, we create a minimal target that accepts all qubit counts
+        # This allows transpile to work without strict coupling constraints
+        from qiskit.circuit.library import XGate, HGate, CXGate, RXGate
+
+        self._target = Target(num_qubits=100)  # Support up to 100 qubits
+        # Add supported gates without coupling constraints
+        self._target.add_instruction(XGate(), {(i,): None for i in range(100)})
+        self._target.add_instruction(HGate(), {(i,): None for i in range(100)})
+        self._target.add_instruction(RXGate(0.5), {(i,): None for i in range(100)})
+        self._target.add_instruction(CXGate(), {(i, j): None for i in range(100) for j in range(100) if i != j})
 
     @property
     def target(self):

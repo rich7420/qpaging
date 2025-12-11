@@ -153,14 +153,24 @@ impl SimulatorController {
 
             // Apply gate operation
             // Pages should be prefetched from iteration (i - lookahead_depth)
-            let matrix = kernels::get_matrix(&op.name, &op.params);
-
-            kernels::apply_single_qubit_gate(
-                mem.as_mut_slice(),
-                self.num_qubits,
-                op.targets[0],
-                matrix,
-            );
+            if op.name.to_uppercase() == "CX" && op.targets.len() >= 2 {
+                // Dispatch CNOT (two-qubit gate)
+                kernels::apply_cnot(
+                    mem.as_mut_slice(),
+                    self.num_qubits,
+                    op.targets[0], // Control
+                    op.targets[1], // Target
+                );
+            } else if !op.targets.is_empty() {
+                // Dispatch single qubit gate
+                let matrix = kernels::get_matrix(&op.name, &op.params);
+                kernels::apply_single_qubit_gate(
+                    mem.as_mut_slice(),
+                    self.num_qubits,
+                    op.targets[0],
+                    matrix,
+                );
+            }
         }
 
         println!("[Rust Core] Execution finished.");
