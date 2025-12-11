@@ -1,7 +1,7 @@
 [package]
 name = "qp_sim_core"
 version = "0.1.0"
-edition = "2021" # 相容 Rust 2024
+edition = "2021" # Compatible with Rust 2024
 authors = ["Q-Paging Team"]
 description = "Out-of-core Quantum Simulator with Circuit-Aware Paging"
 

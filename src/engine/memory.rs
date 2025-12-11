@@ -58,6 +58,11 @@ impl QuantumMemoryManager {
         &mut self.mapping[..]
     }
 
+    /// [New] Expose raw pointer for io_uring operations
+    pub fn as_ptr(&self) -> *const u8 {
+        self.mapping.as_ptr()
+    }
+
     /// Provide advice to OS to free pages (Eviction)
     pub fn evict_page(&mut self, page_idx: usize) {
         let offset = page_idx * PAGE_SIZE;
