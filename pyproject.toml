@@ -1,0 +1,24 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "qp-sim"
+version = "0.1.0"
+description = "A deterministic, circuit-aware virtual memory manager for quantum simulation."
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Operating System :: POSIX :: Linux",
+]
+dependencies = [
+    "qiskit>=1.4.0",
+    "numpy>=2.0.0",
+    "psutil>=6.0.0"
+]
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+module-name = "qp_sim.qp_sim_core" # Map Rust lib to inside the python package
+

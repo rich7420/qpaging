@@ -1,0 +1,35 @@
+[package]
+name = "qp_sim_core"
+version = "0.1.0"
+edition = "2021" # 相容 Rust 2024
+authors = ["Q-Paging Team"]
+description = "Out-of-core Quantum Simulator with Circuit-Aware Paging"
+
+[lib]
+name = "qp_sim_core"
+crate-type = ["cdylib"]
+
+[dependencies]
+# Python Interop (2025 Standard)
+pyo3 = { version = "0.23", features = ["extension-module", "abi3-py310"] }
+numpy = "0.23"
+
+# System & Memory
+memmap2 = "0.9"     # Advanced mmap control
+libc = "0.2"        # Raw system calls (madvise)
+io-uring = "0.7"    # Linux Async I/O interface
+bitvec = "1.0"      # Efficient page tracking
+
+# Concurrency
+tokio = { version = "1.40", features = ["rt", "macros", "fs", "sync"] }
+rayon = "1.10"      # Parallel iterators for gate execution
+
+# Math & Data
+num-complex = "0.4"
+ndarray = "0.16"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+

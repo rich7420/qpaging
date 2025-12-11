@@ -1,0 +1,35 @@
+# Rust
+target/
+Cargo.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Project specific
+qp_data/
+scratch_space/
+*.bin
+state_*.bin
+
+# OS
+.DS_Store
+Thumbs.db
+
